@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { body, validationResult, param } from 'express-validator';
+import app from '../app';
 
 import dns from 'dns';
 import nanoid from 'nanoid';
@@ -31,17 +32,18 @@ export async function generateTinyUrl (req: Request, res: Response, next: NextFu
         };
 
         // Check if already exists
-        // tslint:disable-next-line:no-shadowed-variable
-        const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname).catch(error1 => {
+        try {
+            const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname, next);
+            logger.info('Successfully generated tiny url');
+            return res.send(newTinyUrlObject)
+        } catch(error1) {
             logger.error(`❌ Database problem ${error1}`);
-            return res.status(400).send({error1});
-        });
-        logger.info('Successfully generated tiny url');
-        return res.send(newTinyUrlObject)
+        }
     })
 };
 
-const generateTinyUrlObject = async (url: any, hostname: any) => {
+const generateTinyUrlObject = async (url: any, hostname: any, next: NextFunction) => {
+    const code: string =  nanoid(7);
     return TinyUrl.findOneAndUpdate(
         { url },
         {
@@ -49,13 +51,21 @@ const generateTinyUrlObject = async (url: any, hostname: any) => {
           $setOnInsert: {
             url,
             hostname,
-            code: nanoid(7),
-            createdAt: new Date()
+            tinyUrl: `http://${process.env.corePATH}:${app.get('port')}/${code}`,
+            code,
+            createdAt: new Date(),
+            counter: 0
           },
         },
         {
           new: true,
           upsert: true,
+        }, (error, doc: any) => {
+            if (error) {
+                next(error);
+            }
+            doc.counter++;
+            doc.save();
         }
     );
 }
@@ -65,7 +75,7 @@ export async function getUserUrl (req: Request, res: Response, next: NextFunctio
     // Check if code exists
     await param('tinyUrlCode', 'Code cannot be blank').not().isEmpty().run(req);
     const tinyUrlCode = req.params.tinyUrlCode;
-    await TinyUrl.findOne({ code : tinyUrlCode}, (error, result) => {
+    await TinyUrl.findOne({ code : tinyUrlCode}, (error, result: any) => {
         if (error) {
             logger.error(`❌ Invalid ${error}`);
             return res.status(400).send({error});
@@ -75,7 +85,7 @@ export async function getUserUrl (req: Request, res: Response, next: NextFunctio
             return res.status(400).send({error: 'We couldn\'t not find this url'});
         }
         logger.info('Successfully get tiny url');
-        return res.status(200).send(result);
+        return res.status(200).redirect(result.url);
     });
 };
 
@@ -92,6 +102,9 @@ export async function getDailyStatistic (req: Request, res: Response, next: Next
         {
             $group: {
                 _id: '$hostname',
+                repeat: {
+                    $sum: "$counter",
+                },
                 statistic: {
                     '$sum': 1
                 }
@@ -100,7 +113,8 @@ export async function getDailyStatistic (req: Request, res: Response, next: Next
         {
             $project: {
                 name: '$_id',
-                value: '$statistic'
+                value: '$repeat',
+                number_different: '$statistic'
             }
         }
     ];

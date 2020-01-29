@@ -14,7 +14,6 @@ import { AdminViewComponent } from './admin-view.component';
    imports: [
      CommonModule,
      ReactiveFormsModule,
-     MaterialModule,
      NgxChartsModule,
      AdminViewRoutingModule
    ]

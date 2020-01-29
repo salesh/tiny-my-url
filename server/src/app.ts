@@ -31,9 +31,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/api', router);
-app.use('/', (req, res) => {
-    res.send('Core is up!');
-});
+app.use('/', router);
 
 export default app;

@@ -1,6 +1,12 @@
-<section class="form-section">
-  <h1 class="page-title">TinyUrl</h1>
-  <input class="url-input" type="url" placeholder="Paste in a link" required autofocus>
-  <button type="submit" class="submit-button">Submit</button>
-</section>
-<section class="result-section"></section>
+<div [formGroup]="formGroup">
+  <h1>TinyUrl</h1>
+  <mat-form-field>
+    <mat-label>Paste in a link</mat-label>
+    <input matInput type="url" formControlName="url" required autofocus>
+    <mat-error *ngIf="this.formGroup.get('url').invalid">Invalid input</mat-error>
+  </mat-form-field>
+  <button mat-raised-button (click)="generateUrl()">Submit</button>
+</div>
+<div *ngIf="generatedUrlString">
+  This is your link, you can click it! <a href="#" (click)='goToLink()' >{{ generatedUrlString }}</a>
+</div>

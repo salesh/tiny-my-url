@@ -4,13 +4,14 @@ import { RequestService } from '../request.service';
 @Injectable({
   providedIn: 'root'
 })
-export class AdminViewService {
+export class HomeService {
 
   constructor(private requestService: RequestService) {}
 
-  getDailyStatistic() {
-    return this.requestService.doGET(
-        `/tinyurl/daily-statistic`
+  generateUrl(data: any) {
+    return this.requestService.doPOST(
+      `/tinyurl`, 
+      data
     );
   }
 }

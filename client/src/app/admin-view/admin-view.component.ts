@@ -39,4 +39,7 @@ export class AdminViewComponent implements OnInit {
     });
   }
 
+  onSelect() {
+    console.log('Yes click :)');
+  }
 }
