@@ -27,14 +27,14 @@ export async function generateTinyUrl (req: Request, res: Response, next: NextFu
     dns.lookup(url.hostname, async (error) => {
         if (error) {
             logger.error(`❌ Invalid URL ${error}`);
-            return res.status(404).send({error: 'URL address not found'});
+            return res.status(400).send({error: 'URL address not found'});
         };
 
         // Check if already exists
         // tslint:disable-next-line:no-shadowed-variable
         const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname).catch(error1 => {
             logger.error(`❌ Database problem ${error1}`);
-            return res.status(404).send({error1});
+            return res.status(400).send({error1});
         });
         logger.info('Successfully generated tiny url');
         return res.send(newTinyUrlObject)
@@ -68,11 +68,11 @@ export async function getUserUrl (req: Request, res: Response, next: NextFunctio
     await TinyUrl.findOne({ code : tinyUrlCode}, (error, result) => {
         if (error) {
             logger.error(`❌ Invalid ${error}`);
-            return res.status(404).send({error});
+            return res.status(400).send({error});
         }
         if (result === null) {
             logger.error(`❌ We couldn\'t not find this url`);
-            return res.status(404).send({error: 'We couldn\'t not find this url'});
+            return res.status(400).send({error: 'We couldn\'t not find this url'});
         }
         logger.info('Successfully get tiny url');
         return res.status(200).send(result);
@@ -95,12 +95,18 @@ export async function getDailyStatistic (req: Request, res: Response, next: Next
                 statistic: {
                     '$sum': 1
                 }
+            },
+        },
+        {
+            $project: {
+                name: '$_id',
+                value: '$statistic'
             }
         }
-    ]
+    ];
     TinyUrl.aggregate(aggregate, (error: any, logs: any) => {
         if (error) {
-            return res.status(404).send({error: 'Problem with database'});
+            return res.status(400).send({error: 'Problem with database'});
         }
         return res.send(logs);
     })
