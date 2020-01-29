@@ -4,13 +4,13 @@ const TinyUrlSchema = new Schema({
     tinyUrl: String,
     shortCode: String,
     userUrl: String,
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
+    createdAt: {
+        type: Date,
+        default: Date.now
     },
-    updatedAt: { 
-        type: Date, 
-        default: Date.now 
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 });
 

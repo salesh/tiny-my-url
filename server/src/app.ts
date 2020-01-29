@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 import * as dotenv from 'dotenv';
 import router from './routes';
+import logger from './utils/logger';
 
 dotenv.config();
 
@@ -12,13 +13,15 @@ const app = express();
 
 // Connect to MongoDB
 const mongoUrl = process.env.pathDb;
-console.log(mongoUrl);
 mongoose.connect(mongoUrl, { 
         useNewUrlParser: true, 
         useCreateIndex: true, 
-        useUnifiedTopology: true 
+        useUnifiedTopology: true,
+        useFindAndModify: false
+    }).then(() => {
+        logger.info(`MongoDB is up on: ${mongoUrl}`);
     }).catch(err => {
-        console.log('MongoDB connection error: ' + err);
+        logger.error(` ❌  MongoDB connection error: ${err}`);
  });
 
 // Express configuration
