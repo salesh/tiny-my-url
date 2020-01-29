@@ -16,41 +16,46 @@ export async function generateTinyUrl (req: Request, res: Response, next: NextFu
         return res.status(400).send('URL cannot be blank');
     }
     // Check if url is valid
-    let userUrl;
+    let url: URL;
     try {
-        userUrl = new URL(req.body.url);
-    } catch (err) {
-        logger.error('❌ Invalid URL');
+        url = new URL(req.body.url);
+    } catch (error) {
+        logger.error(`❌ Invalid URL ${error}`);
         return res.status(400).send({error: 'Invalid URL'});
     }
     // Check if url is reachable
-    dns.lookup(userUrl.hostname, (err) => {
-        if (err) {
-            logger.error('❌ Invalid URL');
+    dns.lookup(url.hostname, async (error) => {
+        if (error) {
+            logger.error(`❌ Invalid URL ${error}`);
             return res.status(404).send({error: 'URL address not found'});
         };
-    })
 
-    // Check if already exists
-    const newTinyUrlObject = await generateTinyUrlObject(userUrl.href);
-    logger.info('Successfully generated tiny url');
-    return res.send(newTinyUrlObject)
+        // Check if already exists
+        // tslint:disable-next-line:no-shadowed-variable
+        const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname).catch(error1 => {
+            logger.error(`❌ Database problem ${error1}`);
+            return res.status(404).send({error1});
+        });
+        logger.info('Successfully generated tiny url');
+        return res.send(newTinyUrlObject)
+    })
 };
 
-const generateTinyUrlObject = async (url: any) => {
+const generateTinyUrlObject = async (url: any, hostname: any) => {
     return TinyUrl.findOneAndUpdate(
-        { userUrl: url},
+        { url },
         {
+          updatedAt: new Date(),
           $setOnInsert: {
-            userUrl: url,
-            shortCode: nanoid(7),
+            url,
+            hostname,
+            code: nanoid(7),
+            createdAt: new Date()
           },
         },
         {
           new: true,
           upsert: true,
-        }, (err) => {
-            if (err) logger.error(`❌ Invalid ${err}`);
         }
     );
 }
@@ -60,10 +65,10 @@ export async function getUserUrl (req: Request, res: Response, next: NextFunctio
     // Check if code exists
     await param('tinyUrlCode', 'Code cannot be blank').not().isEmpty().run(req);
     const tinyUrlCode = req.params.tinyUrlCode;
-    await TinyUrl.findOne({ shortCode : tinyUrlCode}, (err, result) => {
-        if (err) {
-            logger.error(`❌ Invalid ${err}`);
-            return res.status(404).send({error: err});
+    await TinyUrl.findOne({ code : tinyUrlCode}, (error, result) => {
+        if (error) {
+            logger.error(`❌ Invalid ${error}`);
+            return res.status(404).send({error});
         }
         if (result === null) {
             logger.error(`❌ We couldn\'t not find this url`);
@@ -73,3 +78,30 @@ export async function getUserUrl (req: Request, res: Response, next: NextFunctio
         return res.status(200).send(result);
     });
 };
+
+export async function getDailyStatistic (req: Request, res: Response, next: NextFunction) {
+    logger.info('Trying to get daily statistic');
+    const aggregate = [
+        {
+            $match : {
+                'createdAt': {
+                        '$gt': new Date(Date.now() - 24*60*60 * 1000)
+                }
+            }
+        },
+        {
+            $group: {
+                _id: '$hostname',
+                statistic: {
+                    '$sum': 1
+                }
+            }
+        }
+    ]
+    TinyUrl.aggregate(aggregate, (error: any, logs: any) => {
+        if (error) {
+            return res.status(404).send({error: 'Problem with database'});
+        }
+        return res.send(logs);
+    })
+}

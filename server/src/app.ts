@@ -13,9 +13,9 @@ const app = express();
 
 // Connect to MongoDB
 const mongoUrl = process.env.pathDb;
-mongoose.connect(mongoUrl, { 
-        useNewUrlParser: true, 
-        useCreateIndex: true, 
+mongoose.connect(mongoUrl, {
+        useNewUrlParser: true,
+        useCreateIndex: true,
         useUnifiedTopology: true,
         useFindAndModify: false
     }).then(() => {
