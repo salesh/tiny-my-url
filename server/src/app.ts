@@ -2,6 +2,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
+import cors from 'cors';
 
 import * as dotenv from 'dotenv';
 import router from './routes';
@@ -26,6 +27,7 @@ mongoose.connect(mongoUrl, {
 
 // Express configuration
 app.set('port', process.env.PORT || 3002);
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
