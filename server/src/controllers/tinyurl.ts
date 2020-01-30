@@ -9,12 +9,19 @@ import logger from '../utils/logger';
 
 export async function generateTinyUrl (req: Request, res: Response, next: NextFunction) {
     logger.info('Trying to generate tiny url');
-    // Check if url exists
+    const url = await validateUrl(req, res, next);
+    const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname, next);
+    logger.info('Successfully generated tiny url');
+    return res.send(newTinyUrlObject)
+};
+
+const validateUrl = async (req: Request, res: Response, next: NextFunction) => {
+    logger.info('Validate url');
     await body('url', 'URL cannot be blank').not().isEmpty().run(req);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         logger.error('❌ URL cannot be blank');
-        return res.status(400).send('URL cannot be blank');
+        throw Error('URL cannot be blank');
     }
     // Check if url is valid
     let url: URL;
@@ -22,28 +29,30 @@ export async function generateTinyUrl (req: Request, res: Response, next: NextFu
         url = new URL(req.body.url);
     } catch (error) {
         logger.error(`❌ Invalid URL ${error}`);
-        return res.status(400).send({error: 'Invalid URL'});
+        throw error;
     }
     // Check if url is reachable
-    dns.lookup(url.hostname, async (error) => {
-        if (error) {
-            logger.error(`❌ Invalid URL ${error}`);
-            return res.status(400).send({error: 'URL address not found'});
-        };
+    try {
+        await lookupPromise(url.hostname);
+    } catch(err) {
+        logger.error(`❌ Can't  lookup address ${err}`);
+        throw err;
+    }
+    return url;
+};
 
-        // Check if already exists
-        try {
-            const newTinyUrlObject = await generateTinyUrlObject(url.href, url.hostname, next);
-            logger.info('Successfully generated tiny url');
-            return res.send(newTinyUrlObject)
-        } catch(error1) {
-            logger.error(`❌ Database problem ${error1}`);
-        }
-    })
+async function lookupPromise(hostname: string){
+    return new Promise((resolve, reject) => {
+        dns.lookup(hostname, (err, address) => {
+            if(err) reject(err);
+            resolve(address);
+        });
+   });
 };
 
 const generateTinyUrlObject = async (url: any, hostname: any, next: NextFunction) => {
     const code: string =  nanoid(7);
+    const tinyUrl = `http://${process.env.corePATH}:${app.get('port')}/${code}`;
     return TinyUrl.findOneAndUpdate(
         { url },
         {
@@ -51,7 +60,7 @@ const generateTinyUrlObject = async (url: any, hostname: any, next: NextFunction
           $setOnInsert: {
             url,
             hostname,
-            tinyUrl: `http://${process.env.corePATH}:${app.get('port')}/${code}`,
+            tinyUrl,
             code,
             createdAt: new Date(),
             counter: 0
@@ -103,7 +112,7 @@ export async function getDailyStatistic (req: Request, res: Response, next: Next
             $group: {
                 _id: '$hostname',
                 repeat: {
-                    $sum: "$counter",
+                    $sum: '$counter',
                 },
                 statistic: {
                     '$sum': 1

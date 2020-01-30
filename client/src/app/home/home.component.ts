@@ -25,7 +25,7 @@ export class HomeComponent implements OnInit {
 
   initializeForm(): void {
     this.formGroup = new FormGroup({
-      url: new FormControl('', { validators: [Validators.required, Validators.pattern(URL_PATTERN)]})        
+      url: new FormControl('', { validators: [Validators.required]})
     });
   }
 
