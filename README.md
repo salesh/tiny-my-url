@@ -27,7 +27,7 @@ npm run start
 
 ### 1. What is a URL shortening system?
 
-URL shortening system is a system whose functionality is to create short URL links from user input. With this system we can create a custom or branded URL shortener.
+URL shortening system is a system which functionality is to create short URL links from user input. With this system we can create a custom or branded URL shortener.
 
 ### 2. What's the main value? Who needs such a system and why?
 
