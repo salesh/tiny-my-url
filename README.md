@@ -1,4 +1,4 @@
-# TinyUrl
+# Tiny Url
 
 ## Technologies and Development
 
